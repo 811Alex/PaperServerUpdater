@@ -18,9 +18,11 @@ while [ -n "$1" ]; do
     -f|--force|force)               force_update=true;;
     -v|--force-version|ver)         latest_version="$2"; shift;;
     -h|--help|help)                 echo "
-      -h, --help:         Print this help message.
-      -y, --assume-yes:   Don't ask for confirmation before update.
-      -s, --short:        To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
+      -h, --help:                     Print this help message.
+      -y, --assume-yes:               Don't ask for confirmation before update.
+      -s, --short:                    To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
+      -f, --force:                    Force update, even if on the latest version.
+      -v, --force-version <version>:  Use specified Minecraft version, instead of the latest one.
     "; exit;;
   esac
   shift
