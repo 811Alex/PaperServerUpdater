@@ -99,7 +99,6 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
           latest_version="$(echo "$opt" | cut -d':' -f1)"
           if [ -n "$(curl -s "$PAPER_API/$latest_version" | jq ".builds.all | select(.[]==\"$latest_build\")")" ]; then
             build_found=true  # build exists for this MC version
-            break
           fi
         else
           while read ver; do # find MC version for specified build
