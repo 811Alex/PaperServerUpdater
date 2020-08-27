@@ -68,7 +68,7 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
           else
             printf "$format_d1" '' "$build_change"
           fi
-          if [[ $build_change =~ ^\[Auto\] ]]; then # if it starts with [Auto], it was an upstream update, so show the comment too, which includes the upstream changes
+          if [[ $build_change =~ ^(\[Auto\]\ )?Updated\ Upstream ]]; then # if it starts with [Auto], it was an upstream update, so show the comment too, which includes the upstream changes
             build_comments=$(echo "$build_info" | jq ".items[$change_num].comment")
             build_comments=$(echo -e "${build_comments:1:-1}" | tail -n+6 | grep -v "^\s*$") # trim
             while read build_comment; do  # format each line of the comment
