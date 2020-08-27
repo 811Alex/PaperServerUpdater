@@ -81,6 +81,7 @@ if $print_changes && curr_build=$(ls -lX paper-* 2>/dev/null); then # if we have
       echo -en "\e[35mUpdate \e[36m$curr_build\e[35m->\e[36m$latest_build\e[35m? [Y/n/<build number>]: \e[0m"
       read -r opt
       if [[ $opt =~ ^[0-9]+$ ]]; then
+        echo -e "\e[35mLooking up build...\e[0m"
         latest_build=$opt
         build_found=false
         while read ver; do # find version for specified build
