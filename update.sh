@@ -10,10 +10,12 @@ OLD_VER_DIR="$PAPER_DIR/old_paper_versions"
 # ARGS
 assume_yes=false
 print_changes=true
+force_update=false
 while [ -n "$1" ]; do
   case "$1" in
     -y|--yes|--assume-yes|yes|auto) assume_yes=true;      shift;;
     -s|--short|short)               print_changes=false;  shift;;
+    -f|--force|force)               force_update=true;    shift;;
     -h|--help|help)                 echo "
       -h, --help:         Print this help message.
       -y, --assume-yes:   Don't ask for confirmation before update.
@@ -31,7 +33,7 @@ latest_build=$(curl -s "$PAPER_API/$latest_version" | jq '.builds.latest' | tr -
 filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
-if [ -e "$filename" ]; then # the latest version already exists here
+if ! $force_update && [ -e "$filename" ]; then # the latest version already exists here
   echo -e "\e[32mYou already have the latest version of Paper!\e[0m"
   exit
 fi
@@ -46,7 +48,7 @@ if $print_changes && curr_build=$(ls -lX paper-* 2>/dev/null); then # if we have
     format_d3="%-$((${indent} + 4))s \e[1;33m%s\e[m\n"
     builds=$(curl -s "$JENKINS_JOBS/Paper-$latest_major/api/json" | jq '.builds[]') # get build list from Jenkins
     build_num=$curr_build
-    echo -e "\e[35mChanges:\e[0m"
+    [ $curr_build -lt $latest_build ] && echo -e "\e[35mChanges:\e[0m"
     while [ $((++build_num)) -le $latest_build ]; do  # for every build number between current and latest builds
       build_url=$(echo "$builds" | jq "select(.number==$build_num) | .url") # get build url from Jenkins
       if [ -n "$build_url" ]; then
