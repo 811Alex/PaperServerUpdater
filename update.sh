@@ -24,7 +24,8 @@ done
 $assume_yes || print_changes=true
 
 # VERSION NUMBERS
-latest_version=$(curl -s "$PAPER_API" | jq '.versions[0]' | tr -d '"')                  # get latest version
+versions=$(curl -s "$PAPER_API" | jq '.versions')
+latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')                  # get latest version
 latest_major=$(echo "$latest_version" | rev | cut -d'.' -f2- | rev)                     # latest major version
 latest_build=$(curl -s "$PAPER_API/$latest_version" | jq '.builds.latest' | tr -d '"')  # get latest build
 filename="paper-${latest_version}-${latest_build}.jar"
@@ -75,9 +76,25 @@ if $print_changes && curr_build=$(ls -lX paper-* 2>/dev/null); then # if we have
       fi
     done
     if ! $assume_yes; then  # ask if we should proceed with the update
-      echo -en "\e[35mUpdate \e[36m$curr_build\e[35m->\e[36m$latest_build\e[35m? [Y/n]: \e[0m"
+      echo -en "\e[35mUpdate \e[36m$curr_build\e[35m->\e[36m$latest_build\e[35m? [Y/n/<build number>]: \e[0m"
       read -r opt
-      if [ -n "$opt" ] && [ "$opt" != "y" ] && [ "$opt" != "Y" ]; then
+      if [[ $opt =~ ^[0-9]+$ ]]; then
+        latest_build=$opt
+        build_found=false
+        while read ver; do # find version for specified build
+          if [ -n "$(curl -s "$PAPER_API/$ver" | jq ".builds.all | select(.[]==\"$opt\")")" ]; then
+            latest_version="$ver"
+            build_found=true
+            break
+          fi
+        done <<< "$(echo "$versions" | jq '.[]' | tr -d '"')"
+        if $build_found; then
+          filename="paper-${latest_version}-${latest_build}.jar"
+        else
+          echo -e '\e[31mBuild not found!\e[0m'
+          exit 1;
+        fi
+      elif [ -n "$opt" ] && [ "$opt" != "y" ] && [ "$opt" != "Y" ]; then
         echo -e '\e[31mCanceled!\e[0m'
         exit 0
       fi
