@@ -91,7 +91,7 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
       fi
       echo -en "\e[35mUpdate $update_text\e[35m? [Y/n/[<MC ver.>:]<build num.>]: \e[0m"
       read -r opt
-      if [[ $opt =~ ^[0-9]+$ ]]; then
+      if [[ $opt =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?:)?[0-9]+$ ]]; then
         echo -e "\e[35mLooking up build...\e[0m"
         build_found=false
         latest_build=$(echo "$opt" | cut -d':' -f2) # parse selected build & MC version
