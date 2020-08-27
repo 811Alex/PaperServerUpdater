@@ -84,7 +84,12 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
       fi
     done
     if ! $assume_yes; then  # ask if we should proceed with the update
-      echo -en "\e[35mUpdate \e[36m$curr_ver\e[35m:\e[36m$curr_build\e[35m->\e[36m$latest_version\e[35m:\e[36m$latest_build\e[35m? [Y/n/[<Minecraft version>:]<build number>]: \e[0m"
+      if [ "$curr_ver" = "$latest_version" ]; then
+        update_text="\e[36m$curr_build\e[35m->\e[36m$latest_build"
+      else
+        update_text="\e[36m$curr_ver\e[35m:\e[36m$curr_build\e[35m->\e[36m$latest_version\e[35m:\e[36m$latest_build"
+      fi
+      echo -en "\e[35mUpdate $update_text\e[35m? [Y/n/[<MC ver.>:]<build num.>]: \e[0m"
       read -r opt
       if [[ $opt =~ ^[0-9]+$ ]]; then
         echo -e "\e[35mLooking up build...\e[0m"
