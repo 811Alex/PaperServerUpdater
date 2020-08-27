@@ -13,21 +13,23 @@ print_changes=true
 force_update=false
 while [ -n "$1" ]; do
   case "$1" in
-    -y|--yes|--assume-yes|yes|auto) assume_yes=true;      shift;;
-    -s|--short|short)               print_changes=false;  shift;;
-    -f|--force|force)               force_update=true;    shift;;
+    -y|--yes|--assume-yes|yes|auto) assume_yes=true;;
+    -s|--short|short)               print_changes=false;;
+    -f|--force|force)               force_update=true;;
+    -v|--force-version|ver)         latest_version="$2"; shift;;
     -h|--help|help)                 echo "
       -h, --help:         Print this help message.
       -y, --assume-yes:   Don't ask for confirmation before update.
       -s, --short:        To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
     "; exit;;
   esac
+  shift
 done
 $assume_yes || print_changes=true
 
 # VERSION NUMBERS
 versions=$(curl -s "$PAPER_API" | jq '.versions')
-latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')                  # get latest version
+[ -z "$latest_version" ] && latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')  # get latest version
 latest_major=$(echo "$latest_version" | rev | cut -d'.' -f2- | rev)                     # latest major version
 latest_build=$(curl -s "$PAPER_API/$latest_version" | jq '.builds.latest' | tr -d '"')  # get latest build
 filename="paper-${latest_version}-${latest_build}.jar"
@@ -39,8 +41,10 @@ if ! $force_update && [ -e "$filename" ]; then # the latest version already exis
 fi
 
 # PRINT CHANGES
-if $print_changes && curr_build=$(ls -lX paper-* 2>/dev/null); then # if we have downloaded previous builds
-  curr_build=$(echo "$curr_build" | tail -n1 | rev | cut -d' ' -f1 | cut -d'.' -f2- | cut -d'-' -f1 | rev) # extract latest downloaded build number
+if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downloaded previous builds
+  curr=$(echo "$curr" | tail -n1 | rev | cut -d' ' -f1 | cut -d'.' -f2- | rev)
+  curr_ver=$(echo "$curr" | cut -d'-' -f2) # extract latest downloaded MC version
+  curr_build=$(echo "$curr" | cut -d'-' -f3) # extract latest downloaded build number
   if [[ $curr_build =~ ^[0-9]+$ ]]; then  # is number
     indent=${#latest_build}
     format_d1="\e[1;36m%-${indent}s \e[1;32m%s\e[m\n"
@@ -78,19 +82,27 @@ if $print_changes && curr_build=$(ls -lX paper-* 2>/dev/null); then # if we have
       fi
     done
     if ! $assume_yes; then  # ask if we should proceed with the update
-      echo -en "\e[35mUpdate \e[36m$curr_build\e[35m->\e[36m$latest_build\e[35m? [Y/n/<build number>]: \e[0m"
+      echo -en "\e[35mUpdate \e[36m$curr_ver\e[35m:\e[36m$curr_build\e[35m->\e[36m$latest_version\e[35m:\e[36m$latest_build\e[35m? [Y/n/[<Minecraft version>:]<build number>]: \e[0m"
       read -r opt
       if [[ $opt =~ ^[0-9]+$ ]]; then
         echo -e "\e[35mLooking up build...\e[0m"
-        latest_build=$opt
         build_found=false
-        while read ver; do # find version for specified build
-          if [ -n "$(curl -s "$PAPER_API/$ver" | jq ".builds.all | select(.[]==\"$opt\")")" ]; then
-            latest_version="$ver"
-            build_found=true
+        latest_build=$(echo "$opt" | cut -d':' -f2) # parse selected build & MC version
+        if [ "$(echo "$opt" | cut -d':' -f1)" != "$latest_build" ]; then
+          latest_version="$(echo "$opt" | cut -d':' -f1)"
+          if [ -n "$(curl -s "$PAPER_API/$latest_version" | jq ".builds.all | select(.[]==\"$opt\")")" ]; then
+            build_found=true  # build exists for this MC version
             break
           fi
-        done <<< "$(echo "$versions" | jq '.[]' | tr -d '"')"
+        else
+          while read ver; do # find MC version for specified build
+            if [ -n "$(curl -s "$PAPER_API/$ver" | jq ".builds.all | select(.[]==\"$opt\")")" ]; then
+              latest_version="$ver"
+              build_found=true
+              break
+            fi
+          done <<< "$(echo "$versions" | jq '.[]' | tr -d '"')"
+        fi
         if $build_found; then
           filename="paper-${latest_version}-${latest_build}.jar"
         else
