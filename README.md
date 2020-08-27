@@ -8,5 +8,7 @@ The script was designed to be usable in other scripts. It also makes a symlink t
 
 Keep in mind that the Paper's devs have, in the past, changed how certain things work, which means that for very old builds, changelogs might not appear correctly. This script focuses on how the APIs it uses (currently Paper API V1 & Jenkins API) and the build comments function on the latest builds.
 
+__Requires__: jq, curl
+
 ## Sample ##
 ![Image showing the script at work](https://raw.githubusercontent.com/811Alex/PaperServerUpdater/master/sample.png)
