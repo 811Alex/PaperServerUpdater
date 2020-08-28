@@ -31,7 +31,14 @@ $assume_yes || print_changes=true
 
 # VERSION NUMBERS
 versions=$(curl -s "$PAPER_API" | jq '.versions')
-[ -z "$latest_version" ] && latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')  # get latest version
+if [ -z "$latest_version" ]; then
+  latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')  # get latest version
+else
+  if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
+    echo -e "\e[31mCan't find the specified version!\e[0m"
+    exit 2
+  fi
+fi
 latest_major=$(echo "$latest_version" | rev | cut -d'.' -f2- | rev)                     # latest major version
 latest_build=$(curl -s "$PAPER_API/$latest_version" | jq '.builds.latest' | tr -d '"')  # get latest build
 filename="paper-${latest_version}-${latest_build}.jar"
