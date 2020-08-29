@@ -20,14 +20,13 @@ while [ -n "$1" ]; do
     -h|--help|help)                 echo "
       -h, --help:                     Print this help message.
       -y, --assume-yes:               Don't ask for confirmation before update.
-      -s, --short:                    To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
+      -s, --short:                    It makes it so the script doesn't print the changes, from the current to the latest build. Useful with the -y flag or for when there's way too many changes.
       -f, --force:                    Force update, even if on the latest version.
       -v, --force-version <version>:  Use specified Minecraft version, instead of the latest one. Supports wildcards, ex.: 1.14.* will select 1.14.4 (the latest one).
     "; exit;;
   esac
   shift
 done
-$assume_yes || print_changes=true
 
 # VERSION NUMBERS
 versions=$(curl -s "$PAPER_API" | jq '.versions')
