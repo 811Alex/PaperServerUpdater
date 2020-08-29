@@ -22,7 +22,7 @@ while [ -n "$1" ]; do
       -y, --assume-yes:               Don't ask for confirmation before update.
       -s, --short:                    To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
       -f, --force:                    Force update, even if on the latest version.
-      -v, --force-version <version>:  Use specified Minecraft version, instead of the latest one.
+      -v, --force-version <version>:  Use specified Minecraft version, instead of the latest one. Supports wildcards, ex.: 1.14.* will select 1.14.4 (the latest one).
     "; exit;;
   esac
   shift
@@ -34,9 +34,32 @@ versions=$(curl -s "$PAPER_API" | jq '.versions')
 if [ -z "$latest_version" ]; then
   latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')  # get latest version
 else
-  if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
-    echo -e "\e[31mCan't find the specified version!\e[0m"
-    exit 2
+  if [[ "$latest_version" =~ \* ]]; then  # contains wildcard
+    echo -en "\e[35mLooking up matching versions...\e[0m"
+    latest_version=$(echo "$latest_version" | sed 's/\.\**$/(&)?/g; s/\./\\./g; s/\*/.**/g')  # make regex
+    matching_versions=""
+    isfirst=true
+    for ver in $(echo "$versions" | jq '.[]' | tr -d '"'); do # scan versions
+      if [[ $ver =~ $latest_version ]]; then  # check if the version matches
+        $isfirst || echo -en "\e[35m,\e[0m"
+        isfirst=false
+        echo -en " \e[32m$ver\e[0m"
+        matching_versions="$matching_versions$ver\n"
+      fi
+    done
+    matching_versions=$(echo -e "$matching_versions" | head -n1)
+    if [ -n "$matching_versions" ]; then
+      latest_version="$matching_versions"
+      echo -e "\n\e[35mSelected latest matching version: \e[36m$latest_version\e[0m"
+    else
+      echo -e "\n\e[31mCan't find a matching version!\e[0m"
+      exit 2
+    fi
+  else
+    if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
+      echo -e "\e[31mCan't find the specified version!\e[0m"
+      exit 2
+    fi
   fi
 fi
 latest_major=$(echo "$latest_version" | rev | cut -d'.' -f2- | rev)                     # latest major version
