@@ -156,7 +156,7 @@ fi
 # DOWNLOAD UPDATE
 echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
-mv paper-*.jar "$OLD_VER_DIR/" 2>/dev/null  # move old versions, to keep things clean
+mv -f paper-*.jar "$OLD_VER_DIR/" # move old versions, to keep things clean
 
 wget -q --show-progress -O "$filename" "$PAPER_API/$latest_version/$latest_build/download"
 chmod +x "$filename"
