@@ -2,7 +2,7 @@
 
 # CONST
 PAPER_URL='https://papermc.io'
-PAPER_API="$PAPER_URL/api/v1/paper"
+PAPER_API="$PAPER_URL/api/v2/projects/paper"
 JENKINS_JOBS="$PAPER_URL/ci/job"
 PAPER_DIR="$(dirname "$(realpath "$0")")"   # run @ location of the script
 OLD_VER_DIR="$PAPER_DIR/old_paper_versions"
@@ -32,7 +32,7 @@ $assume_yes || print_changes=true
 # VERSION NUMBERS
 versions=$(curl -s "$PAPER_API" | jq '.versions')
 if [ -z "$latest_version" ]; then
-  latest_version=$(echo "$versions" | jq '.[0]' | tr -d '"')  # get latest version
+  latest_version=$(echo "$versions" | jq '.[-1]' | tr -d '"')  # get latest version
 else
   if [[ "$latest_version" =~ \* ]]; then  # contains wildcard
     echo -en "\e[35mLooking up matching versions...\e[0m"
@@ -63,7 +63,7 @@ else
   fi
 fi
 latest_major=$(echo "$latest_version" | rev | cut -d'.' -f2- | rev)                     # latest major version
-latest_build=$(curl -s "$PAPER_API/$latest_version" | jq '.builds.latest' | tr -d '"')  # get latest build
+latest_build=$(curl -s "$PAPER_API/versions/$latest_version" | jq '.builds[-1]')  # get latest build
 filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
@@ -127,12 +127,12 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
         latest_build=$(echo "$opt" | cut -d':' -f2) # parse selected build & MC version
         if [ "$(echo "$opt" | cut -d':' -f1)" != "$latest_build" ]; then
           latest_version="$(echo "$opt" | cut -d':' -f1)"
-          if [ -n "$(curl -s "$PAPER_API/$latest_version" | jq ".builds.all | select(.[]==\"$latest_build\")")" ]; then
+          if [ -n "$(curl -s "$PAPER_API/versions/$latest_version" | jq ".builds | select(.[]==$latest_build)")" ]; then
             build_found=true  # build exists for this MC version
           fi
         else
           while read ver; do # find MC version for specified build
-            if [ -n "$(curl -s "$PAPER_API/$ver" | jq ".builds.all | select(.[]==\"$latest_build\")")" ]; then
+            if [ -n "$(curl -s "$PAPER_API/versions/$ver" | jq ".builds | select(.[]==$latest_build)")" ]; then
               latest_version="$ver"
               build_found=true
               break
@@ -158,7 +158,7 @@ echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
 mv -f paper-*.jar "$OLD_VER_DIR/" # move old versions, to keep things clean
 
-wget -q --show-progress -O "$filename" "$PAPER_API/$latest_version/$latest_build/download"
+wget -q --show-progress -O "$filename" "$PAPER_API/versions/$latest_version/builds/$latest_build/downloads/paper-$latest_version-$latest_build.jar"
 chmod +x "$filename"
 ln -s -f "$filename" "paper"  # make symlink, with a static name, for use in scripts
 echo -e "\e[90mYou can use the \"paper\" symlink to start Paper.\n\e[32mDone!\e[0m"
