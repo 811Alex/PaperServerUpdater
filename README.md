@@ -6,7 +6,7 @@ You can also specify which Minecraft version or Paper build you want. Technicall
 
 The script was designed to be usable in other scripts. It also makes a symlink to the latest build, that has a static name, so you can use that in scripts too.
 
-Keep in mind that the Paper's devs have, in the past, changed how certain things work, which means that for very old builds, changelogs might not appear correctly. This script focuses on how the APIs it uses (currently Paper API V1 & Jenkins API) and the build comments function on the latest builds.
+Keep in mind that the Paper's devs have, in the past, changed how certain things work, which means that for very old builds, changelogs might not appear correctly. This script focuses on how the APIs it uses (currently Paper API V2) and the build comments function on the latest builds.
 
 __Requires__: jq, curl
 
