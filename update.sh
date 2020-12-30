@@ -3,7 +3,6 @@
 # CONST
 PAPER_URL='https://papermc.io'
 PAPER_API="$PAPER_URL/api/v2/projects/paper"
-JENKINS_JOBS="$PAPER_URL/ci/job"
 PAPER_DIR="$(dirname "$(realpath "$0")")"   # run @ location of the script
 OLD_VER_DIR="$PAPER_DIR/old_paper_versions"
 
@@ -82,36 +81,34 @@ if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then # if we have downl
     format_d1="\e[1;36m%-${indent}s \e[1;32m%s\e[m\n"
     format_d2="%-$((${indent} + 2))s \e[1;34m%s\e[m\n"
     format_d3="%-$((${indent} + 4))s \e[1;33m%s\e[m\n"
-    builds=$(curl -s "$JENKINS_JOBS/Paper-$latest_major/api/json" | jq '.builds[]') # get build list from Jenkins
+    builds=$(curl -s "$PAPER_API/versions/$latest_version" | jq '.builds[]') # get build list
     build_num=$curr_build
     [ $curr_build -lt $latest_build ] && echo -e "\e[35mChanges:\e[0m"
     while [ $((++build_num)) -le $latest_build ]; do  # for every build number between current and latest builds
-      build_url=$(echo "$builds" | jq "select(.number==$build_num) | .url") # get build url from Jenkins
-      if [ -n "$build_url" ]; then
-        build_info=$(curl -s "${build_url:1:-1}api/json?tree=id,changeSet\[items\[msg,comment\]\]" | jq '.changeSet') # get build info from Jenkins
-        build_changes=$(echo "$build_info" | jq '.items[].msg') # extract the change messages
-        change_num=0
-        while read build_change; do # for each change
-          build_change=${build_change:1:-1}
-          if [ $change_num -eq 0 ]; then # print change message with proper formatting
-            printf "$format_d1" $build_num "$build_change"
-          else
-            printf "$format_d1" '' "$build_change"
-          fi
-          if [[ $build_change =~ ^(\[Auto\]\ )?Updated\ Upstream ]]; then # if it starts with [Auto], it was an upstream update, so show the comment too, which includes the upstream changes
-            build_comments=$(echo "$build_info" | jq ".items[$change_num].comment")
-            build_comments=$(echo -e "${build_comments:1:-1}" | tail -n+6 | grep -v "^\s*$") # trim
-            while read build_comment; do  # format each line of the comment
-              if [[ $build_comment =~ ^[A-Z] ]]; then # is header
-                printf "$format_d2" '' "$build_comment"
-              else
-                printf "$format_d3" '' "$build_comment"
-              fi
-            done <<< "$build_comments"
-          fi
-          ((change_num++))
-        done <<< "$build_changes"
-      fi
+      build_url="$PAPER_API/versions/$latest_version/builds/$build_num" # get build url
+      build_info=$(curl -s "$build_url" | jq '.changes') # get build info
+      build_summary=$(echo "$build_info" | jq '.[].summary') # extract the change summaries
+      change_num=0
+      while read build_change; do # for each change
+        build_change=${build_change:1:-1}
+        if [ $change_num -eq 0 ]; then # print change message with proper formatting
+          printf "$format_d1" $build_num "$build_change"
+        else
+          printf "$format_d1" '' "$build_change"
+        fi
+        if [[ $build_change =~ ^(\[Auto\]\ )?Updated\ Upstream ]]; then # if it starts with [Auto], it was an upstream update, so show the message too, which includes the upstream changes
+          build_message=$(echo "$build_info" | jq ".[$change_num].message")
+          build_message=$(echo -e "${build_message:1:-1}" | tail -n+6 | grep -v "^\s*$") # trim
+          while read build_comment; do  # format each line of the comment
+            if [[ $build_comment =~ ^[A-Z] ]]; then # is header
+              printf "$format_d2" '' "$build_comment"
+            else
+              printf "$format_d3" '' "$build_comment"
+            fi
+          done <<< "$build_message"
+        fi
+        ((change_num++))
+      done <<< "$build_summary"
     done
     if ! $assume_yes; then  # ask if we should proceed with the update
       if [ "$curr_ver" = "$latest_version" ]; then
