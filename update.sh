@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # CONST
-PAPER_URL='https://papermc.io'
-PAPER_API="$PAPER_URL/api/v2/projects/paper"
+PAPER_API='https://api.papermc.io/v2/projects/paper'
 PAPER_DIR="$(dirname "$(realpath "$0")")"   # run @ location of the script
 OLD_VER_DIR="$PAPER_DIR/old_paper_versions"
 
