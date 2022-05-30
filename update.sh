@@ -74,8 +74,8 @@ if ! $force_update && [ -e "$filename" ]; then                        # the late
 fi
 
 # PRINT CHANGES
-if $print_changes && curr=$(ls -lX paper-* 2>/dev/null); then         # if we have downloaded previous builds
-  curr=$(echo "$curr" | tail -n1 | rev | cut -d' ' -f1 | cut -d'.' -f2- | rev)
+if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then         # if we have downloaded previous builds
+  curr=$(echo "$curr" | sort -V | tail -n1 | rev | cut -d'.' -f2- | rev)
   curr_ver=$(echo "$curr" | cut -d'-' -f2)                            # extract latest downloaded MC version
   curr_build=$(echo "$curr" | cut -d'-' -f3)                          # extract latest downloaded build number
   if [[ $curr_build =~ ^[0-9]+$ ]]; then                              # is number
