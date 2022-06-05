@@ -136,7 +136,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
               build_found=true
               break
             fi
-          done <<< "$(echo "$versions" | jq '.[]' | tr -d \")"
+          done <<< "$(echo "$versions" | jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]")"
         fi
         if $build_found; then
           filename="paper-${latest_version}-${latest_build}.jar"
