@@ -124,9 +124,11 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
         latest_build=$(echo "$opt" | cut -d':' -f2)   # parse selected build & MC version
         if echo "$opt" | grep ':'; then
           latest_version="$(echo "$opt" | cut -d':' -f1)"
-          if [ -n "$(apiget "versions/$latest_version" ".builds | select(.[]==$latest_build)")" ]; then
-            build_found=true                          # build exists for this MC version
+          if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
+            echo -e '\e[31mVersion not found!\e[0m'
+            exit 4
           fi
+          [ -n "$(apiget "versions/$latest_version" ".builds | select(.[]==$latest_build)")" ] && build_found=true  # build exists for this MC version
         else
           while read ver; do                          # find MC version for specified build
             if [ -n "$(apiget "versions/$ver" ".builds | select(.[]==$latest_build)")" ]; then
