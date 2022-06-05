@@ -139,6 +139,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
           done <<< "$(echo "$versions" | jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]")"
         fi
         if $build_found; then
+          echo -e "\e[1;32mFound \e[35m$latest_version\e[32m:\e[35m$latest_build\e[32m!\e[0m"
           filename="paper-${latest_version}-${latest_build}.jar"
         else
           echo -e '\e[31mBuild not found!\e[0m'
