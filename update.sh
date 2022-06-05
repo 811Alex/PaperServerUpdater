@@ -60,7 +60,7 @@ else
   else
     if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
       echo -e "\e[31mCan't find the specified version!\e[0m"
-      exit 2
+      exit 3
     fi
   fi
 fi
