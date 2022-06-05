@@ -34,14 +34,14 @@ apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq "$2") || (curl -s "$PAPER
 # VERSION NUMBERS
 versions=$(apiget '.versions')
 if [ -z "$latest_version" ]; then
-  latest_version=$(echo "$versions" | jq '.[-1]' | tr -d \")  # get latest version
+  latest_version=$(echo "$versions" | jq -r '.[-1]')          # get latest version
 else
   if [[ "$latest_version" =~ \* ]]; then                      # contains wildcard
     echo -en "\e[35mLooking up matching versions...\e[0m"
     latest_version=$(echo "$latest_version" | sed 's/\.\**$/(&)?/g; s/\./\\./g; s/\*/.**/g')  # make regex
     matching_versions=""
     isfirst=true
-    for ver in $(echo "$versions" | jq '.[]' | tr -d \"); do  # scan versions
+    for ver in $(echo "$versions" | jq -r '.[]'); do          # scan versions
       if [[ $ver =~ $latest_version ]]; then                  # check if the version matches
         $isfirst || echo -en "\e[35m,\e[0m"
         isfirst=false
@@ -68,13 +68,13 @@ latest_build=$(apiget "versions/$latest_version" '.builds[-1]')       # get late
 filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
-if ! $force_update && [ -e "$filename" ]; then                        # the latest version already exists here
+if ! $force_update && [ -e "$filename" ]; then                            # the latest version already exists here
   echo -e "\e[32mYou already have the latest version of Paper!\e[0m"
   exit
 fi
 
 # PRINT CHANGES
-if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then         # if we have downloaded previous builds
+if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if we have downloaded previous builds
   curr=$(echo "$curr" | sort -V | tail -n1 | rev | cut -d'.' -f2- | rev)
   curr_ver=$(echo "$curr" | cut -d'-' -f2)                            # extract latest downloaded MC version
   curr_build=$(echo "$curr" | cut -d'-' -f3)                          # extract latest downloaded build number
@@ -122,7 +122,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then         # if we hav
         echo -e "\e[35mLooking up build...\e[0m"
         build_found=false
         latest_build=$(echo "$opt" | cut -d':' -f2)   # parse selected build & MC version
-        if [ "$(echo "$opt" | cut -d':' -f1)" != "$latest_build" ]; then
+        if echo "$opt" | grep ':'; then
           latest_version="$(echo "$opt" | cut -d':' -f1)"
           if [ -n "$(apiget "versions/$latest_version" ".builds | select(.[]==$latest_build)")" ]; then
             build_found=true                          # build exists for this MC version
@@ -140,11 +140,11 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then         # if we hav
           filename="paper-${latest_version}-${latest_build}.jar"
         else
           echo -e '\e[31mBuild not found!\e[0m'
-          exit 1;
+          exit 1
         fi
       elif [ -n "$opt" ] && [ "$opt" != "y" ] && [ "$opt" != "Y" ]; then
         echo -e '\e[31mCanceled!\e[0m'
-        exit 0
+        exit
       fi
     fi
   fi
