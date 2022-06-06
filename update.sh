@@ -36,33 +36,16 @@ versions=$(apiget '.versions')
 if [ -z "$latest_version" ]; then
   latest_version=$(echo "$versions" | jq -r '.[-1]')          # get latest version
 else
-  if [[ "$latest_version" =~ \* ]]; then                      # contains wildcard
-    echo -en "\e[35mLooking up matching versions...\e[0m"
-    latest_version=$(echo "$latest_version" | sed 's/\.\**$/(&)?/g; s/\./\\./g; s/\*/.**/g')  # make regex
-    matching_versions=""
-    isfirst=true
-    for ver in $(echo "$versions" | jq -r '.[]'); do          # scan versions
-      if [[ $ver =~ $latest_version ]]; then                  # check if the version matches
-        $isfirst || echo -en "\e[35m,\e[0m"
-        isfirst=false
-        echo -en " \e[32m$ver\e[0m"
-        matching_versions="$matching_versions$ver\n"
-      fi
-    done
-    matching_versions=$(echo -e "$matching_versions" | head -n1)
-    if [ -n "$matching_versions" ]; then
-      latest_version="$matching_versions"
-      echo -e "\n\e[35mSelected latest matching version: \e[36m$latest_version\e[0m"
-    else
-      echo -e "\n\e[31mCan't find a matching version!\e[0m"
-      exit 2
-    fi
-  else
-    if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
-      echo -e "\e[31mCan't find the specified version!\e[0m"
-      exit 3
-    fi
+  echo -en "\e[35mLooking up matching versions... \e[0m"
+  version_pattern="^$(sed 's/\.\*$/(&)?/g; s/\./\\\\./g; s/\*/.*/g' <<< "$latest_version")$"  # make regex
+  matching_versions=$(jq "[.[] | match(\"$version_pattern\").string]" <<< "$versions")
+  echo -e "\e[36m$(jq -r 'join("\\e[35m, \\e[36m")' <<< "$matching_versions")\e[0m"
+  if $(jq 'isempty(.[])' <<< "$matching_versions"); then
+    echo -e "\e[31mCan't find a matching version!\e[0m"
+    exit 2
   fi
+  latest_version="$(jq -r '.[-1]' <<< "$matching_versions")"
+  echo -e "\e[35mSelected latest matching version: \e[32m$latest_version\e[0m"
 fi
 latest_ver_builds=$(apiget "versions/$latest_version/builds" '.builds')
 latest_build=$(echo "$latest_ver_builds" | jq '.[-1].build')              # get latest build
