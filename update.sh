@@ -29,7 +29,8 @@ $assume_yes || print_changes=true
 
 # FUNCTIONS
 tolower(){ echo "$@" | awk '{print tolower($0)}'; }
-apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq ${@:3} "$2") || (curl -s "$PAPER_API" | jq "$1"); }
+apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq ${@:3} "$2") || (curl -s "$PAPER_API" | jq "$1"); }  # (jq commands) or (API path, jq commands, [jq flags])
+abort(){ echo -e "\e[$( ([ -n "$2" ] && [ $2 -ne 0 ]) && echo '31' || echo '32')m$1\e[0m"; exit $2; }       # (message, [exit code])
 
 # VERSION NUMBERS
 versions=$(apiget '.versions')
@@ -40,10 +41,7 @@ else
   version_pattern="^$(sed 's/\.\*$/(&)?/g; s/\./\\\\./g; s/\*/.*/g' <<< "$latest_version")$"  # make regex
   matching_versions=$(jq "[.[] | match(\"$version_pattern\").string]" <<< "$versions")
   echo -e "\e[36m$(jq -r 'join("\\e[35m, \\e[36m")' <<< "$matching_versions")\e[0m"
-  if $(jq 'isempty(.[])' <<< "$matching_versions"); then
-    echo -e "\e[31mCan't find a matching version!\e[0m"
-    exit 2
-  fi
+  $(jq 'isempty(.[])' <<< "$matching_versions") && abort "Can't find a matching version!" 2   # no matching versions
   latest_version="$(jq -r '.[-1]' <<< "$matching_versions")"
   echo -e "\e[35mSelected latest matching version: \e[32m$latest_version\e[0m"
 fi
@@ -52,10 +50,7 @@ latest_build=$(echo "$latest_ver_builds" | jq '.[-1].build')              # get 
 filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
-if ! $force_update && [ -e "$filename" ]; then                            # the latest version already exists here
-  echo -e "\e[32mYou already have the latest version of Paper!\e[0m"
-  exit
-fi
+! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
 
 # PRINT CHANGES
 if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if we have downloaded previous builds
@@ -125,10 +120,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
         latest_build=$(echo "$opt" | cut -d':' -f2)   # parse selected build & MC version
         if echo "$opt" | grep ':'; then
           latest_version="$(echo "$opt" | cut -d':' -f1)"
-          if [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ]; then
-            echo -e '\e[31mVersion not found!\e[0m'
-            exit 4
-          fi
+          [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ] && abort 'Version not found!' 4      # no such MC version
           [ -n "$(apiget "versions/$latest_version" ".builds | select(.[]==$latest_build)")" ] && build_found=true  # build exists for this MC version
         else
           while read ver; do                          # find MC version for specified build
@@ -139,16 +131,11 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
             fi
           done <<< "$(echo "$versions" | jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]")"
         fi
-        if $build_found; then
-          echo -e "\e[1;32mFound \e[35m$latest_version\e[32m:\e[35m$latest_build\e[32m!\e[0m"
-          filename="paper-${latest_version}-${latest_build}.jar"
-        else
-          echo -e '\e[31mBuild not found!\e[0m'
-          exit 1
-        fi
+        $build_found || abort 'Build not found!' 1
+        echo -e "\e[1;32mFound \e[35m$latest_version\e[32m:\e[35m$latest_build\e[32m!\e[0m"
+        filename="paper-${latest_version}-${latest_build}.jar"
       elif [ -n "$opt" ] && [ "$opt" != "y" ] && [ "$opt" != "Y" ]; then
-        echo -e '\e[31mCanceled!\e[0m'
-        exit
+        abort 'Canceled!'
       fi
     fi
   fi
