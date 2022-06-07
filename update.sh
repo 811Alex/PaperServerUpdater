@@ -29,7 +29,7 @@ $assume_yes || print_changes=true
 
 # FUNCTIONS
 tolower(){ awk '{print tolower($0)}' <<< "$@"; }
-apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq ${@:3} "$2") || (curl -s "$PAPER_API" | jq "$1"); }  # (jq commands) or (API path, jq commands, [jq flags])
+apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq ${@:3} "$2"; true) || (curl -s "$PAPER_API" | jq "$1"); }  # (jq commands) or (API path, jq commands, [jq flags])
 abort(){ echo -e "\e[$( ([ -n "$2" ] && [ $2 -ne 0 ]) && echo '31' || echo '32')m$1\e[0m"; exit $2; }       # (message, [exit code])
 
 # VERSION NUMBERS
