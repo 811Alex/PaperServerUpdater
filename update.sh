@@ -28,14 +28,14 @@ done
 $assume_yes || print_changes=true
 
 # FUNCTIONS
-tolower(){ echo "$@" | awk '{print tolower($0)}'; }
+tolower(){ awk '{print tolower($0)}' <<< "$@"; }
 apiget(){ [ -n "$2" ] && (curl -s "$PAPER_API/$1" | jq ${@:3} "$2") || (curl -s "$PAPER_API" | jq "$1"); }  # (jq commands) or (API path, jq commands, [jq flags])
 abort(){ echo -e "\e[$( ([ -n "$2" ] && [ $2 -ne 0 ]) && echo '31' || echo '32')m$1\e[0m"; exit $2; }       # (message, [exit code])
 
 # VERSION NUMBERS
 versions=$(apiget '.versions')
 if [ -z "$latest_version" ]; then
-  latest_version=$(echo "$versions" | jq -r '.[-1]')          # get latest version
+  latest_version=$(echo "$versions" | jq -r '.[-1]')                      # get latest version
 else
   echo -en "\e[35mLooking up matching versions... \e[0m"
   version_pattern="^$(sed 's/\.\*$/(&)?/g; s/\./\\\\./g; s/\*/.*/g' <<< "$latest_version")$"  # make regex
@@ -46,48 +46,48 @@ else
   echo -e "\e[35mSelected latest matching version: \e[32m$latest_version\e[0m"
 fi
 latest_ver_builds=$(apiget "versions/$latest_version/builds" '.builds')
-latest_build=$(echo "$latest_ver_builds" | jq '.[-1].build')              # get latest build
+latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")                 # get latest build
 filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
 ! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
 
 # PRINT CHANGES
-if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if we have downloaded previous builds
-  curr=$(echo "$curr" | sort -V | tail -n1 | rev | cut -d'.' -f2- | rev)
-  curr_ver=$(echo "$curr" | cut -d'-' -f2)                                # extract latest downloaded MC version
-  curr_build=$(echo "$curr" | cut -d'-' -f3)                              # extract latest downloaded build number
-  if [[ $curr_build =~ ^[0-9]+$ ]] && [ -n "$(echo "$versions" | jq "select(.[]==\"$curr_ver\" and .[]==\"$latest_version\")")" ]; then # curr build is number & curr and latest ver. exist
-    included_versions=$(echo "$versions" | jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]")
-    included_ver_num=$(echo "$included_versions" | wc -l)
+if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if we have downloaded previous builds
+  curr="$(sort -V <<< "$curr" | tail -n1 | rev | cut -d'.' -f2- | rev)"
+  curr_ver=$(cut -d'-' -f2 <<< "$curr")                                   # extract latest downloaded MC version
+  curr_build=$(cut -d'-' -f3 <<< "$curr")                                 # extract latest downloaded build number
+  if [[ $curr_build =~ ^[0-9]+$ ]] && [ -n "$(jq "select(.[]==\"$curr_ver\" and .[]==\"$latest_version\")" <<< "$versions")" ]; then # curr build is number & curr and latest ver. exist
+    included_versions=$(jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]" <<< "$versions")
+    included_ver_num=$(wc -l <<< "$included_versions")
 
     [ -n "$included_versions" ] &&
     while read loop_ver; do                                               # for each MC version from current to latest
       if [ $included_ver_num -gt 1 ]; then
         echo -e "\e[35mChanges for \e[1;35m$loop_ver\e[0;35m:\e[0m"
-        latest_ver_builds=$(apiget "versions/$loop_ver/builds" '.builds')
-        latest_build=$(echo "$latest_ver_builds" | jq '.[-1].build')
+        latest_ver_builds="$(apiget "versions/$loop_ver/builds" '.builds')"
+        latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")
       elif [ $curr_build -lt $latest_build ]; then
         echo -e "\e[35mChanges:\e[0m"
       fi
-      latest_ver_builds=$(echo "$latest_ver_builds" | jq -c '.[]')
-      [ "$loop_ver" = "$curr_ver" ] && latest_ver_builds=$(echo "$latest_ver_builds" | jq -c "select(.build > $curr_build)")
+      latest_ver_builds="$(jq -c '.[]' <<< "$latest_ver_builds")"
+      [ "$loop_ver" = "$curr_ver" ] && latest_ver_builds="$(jq -c "select(.build > $curr_build)" <<< "$latest_ver_builds")"
 
       indent=${#latest_build}
       format_summary="\e[1;36m%-${indent}s \e[1;32m%s\e[0m\n"
-      format_upstream_header="%-$((${indent} + 2))s \e[1;34m%s\e[0m\n"
-      format_upstream_message="%-$((${indent} + 4))s \e[1;33m%s\e[0m\n"
+      format_upstream_header="%-$((indent + 2))s \e[1;34m%s\e[0m\n"
+      format_upstream_message="%-$((indent + 4))s \e[1;33m%s\e[0m\n"
       format_nochange="\e[1;36m%-${indent}s \e[1;31m%s\e[0m\n"
       format_ciskip="\e[1;36m%-${indent}s \e[1;30m%s\e[0m\n"
 
       [ -n "$latest_ver_builds" ] &&
-      while read -r loop_build; do           # for each build of this MC version, from current/first to latest
-        changes="$(echo "$loop_build" | jq '.changes' | jq -sc '.[] | to_entries[] | {key} + .value')"  # get (enumerated) build info
-        build_num=$(echo "$loop_build" | jq '.build')
+      while read -r loop_build; do          # for each build of this MC version, from current/first to latest
+        changes="$(jq '.changes' <<< "$loop_build" | jq -sc '.[] | to_entries[] | {key} + .value')"  # get (enumerated) build info
+        build_num=$(jq '.build' <<< "$loop_build")
         if [ -n "$changes" ]; then
           while read -r loop_change; do     # for each change in build
-            change_build_num=$([ $(echo "$loop_change" | jq '.key') -eq 0 ] && echo "$build_num")       # only print num if first change
-            change_summary="$(echo "$loop_change" | jq -r '.summary')"
+            change_build_num=$([ $(jq '.key' <<< "$loop_change") -eq 0 ] && echo "$build_num")       # only print num if first change
+            change_summary="$(jq -r '.summary' <<< "$loop_change")"
             change_summary_format="$([[ "$(tolower "$change_summary")" =~ ^\[ci[-\ ]skip\] ]] && echo "$format_ciskip" || echo "$format_summary")" # color ci skips
             printf "$change_summary_format" "$change_build_num" "$change_summary"
             if [[ "$(tolower "$change_summary")" =~ ^(\[auto\]\ )?updated\ upstream ]]; then  # if it starts with [Auto], it was an upstream update, so show the message too, which includes the upstream changes
@@ -97,7 +97,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
                 elif [[ "$(tolower "$msg_line")" =~ ^[a-f0-9]{8,}\  ]]; then                  # upstream commit message
                   printf "$format_upstream_message" '' "$msg_line"
                 fi
-              done <<< "$(echo "$loop_change" | jq -r '.message')"
+              done <<< "$(jq -r '.message' <<< "$loop_change")"
             fi
           done <<< "$changes"
         else
@@ -114,13 +114,13 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
       fi
       echo -en "\e[35mUpdate $update_text\e[35m? [Y/n/[<MC ver.>:]<build num.>]: \e[0m"
       read -r opt
-      if [[ $opt =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?:)?[0-9]+$ ]]; then
+      if [[ "$opt" =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?:)?[0-9]+$ ]]; then
         echo -e "\e[35mLooking up build...\e[0m"
         build_found=false
-        latest_build=$(echo "$opt" | cut -d':' -f2)   # parse selected build & MC version
-        if echo "$opt" | grep ':' >/dev/null; then
-          latest_version="$(echo "$opt" | cut -d':' -f1)"
-          [ -z "$(echo "$versions" | jq "select(.[]==\"$latest_version\")")" ] && abort 'Version not found!' 4      # no such MC version
+        latest_build=$(cut -d':' -f2 <<< "$opt")      # parse selected build & MC version
+        if grep ':' <<< "$opt" >/dev/null; then
+          latest_version="$(cut -d':' -f1 <<< "$opt")"
+          [ -z "$(jq "select(.[]==\"$latest_version\")" <<< "$versions")" ] && abort 'Version not found!' 4         # no such MC version
           [ -n "$(apiget "versions/$latest_version" ".builds | select(.[]==$latest_build)")" ] && build_found=true  # build exists for this MC version
         else
           while read ver; do                          # find MC version for specified build
@@ -129,7 +129,7 @@ if $print_changes && curr=$(ls -1 paper-* 2>/dev/null); then              # if w
               build_found=true
               break
             fi
-          done <<< "$(echo "$versions" | jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]")"
+          done <<< "$(jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]" <<< "$versions")"
         fi
         $build_found || abort 'Build not found!' 1
         echo -e "\e[1;32mFound \e[35m$latest_version\e[32m:\e[35m$latest_build\e[32m!\e[0m"
