@@ -151,7 +151,9 @@ echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
 mv -f paper-*.jar "$OLD_VER_DIR/"   # move old versions, to keep things clean
 
-wget -q --show-progress -O "$filename" "$PAPER_API/versions/$latest_version/builds/$latest_build/downloads/paper-$latest_version-$latest_build.jar"
+dl_info="$(apiget "versions/$latest_version/builds/$latest_build" '.downloads.application//""')"
+dl_filename="$(jq -r ".name//\"paper-${latest_version}-${latest_build}.jar\"" <<< "$dl_info")"
+wget -q --show-progress -O "$filename" "$PAPER_API/versions/$latest_version/builds/$latest_build/downloads/$dl_filename"
 chmod +x "$filename"
 ln -s -f "$filename" "paper"        # make symlink, with a static name, for use in scripts
 echo -e "\e[90mYou can use the \"paper\" symlink to start Paper.\n\e[32mDone!\e[0m"
