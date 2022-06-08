@@ -66,6 +66,11 @@ if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if w
       if [ $included_ver_num -gt 1 ]; then
         echo -e "\e[35mChanges for \e[1;35m$loop_ver\e[0;35m:\e[0m"
         latest_ver_builds="$(apiget "versions/$loop_ver/builds" '.builds')"
+        if $(jq 'isempty(.[])' <<< "$latest_ver_builds"); then
+          echo -e "\e[1;31mNone found!\e[0m"
+          [ "$loop_ver" == "$latest_version" ] && latest_version=$(jq -r ".[index(\"$latest_version\")-1]" <<< "$versions")
+          continue
+        fi
         latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")
       elif [ $curr_build -lt $latest_build ]; then
         echo -e "\e[35mChanges:\e[0m"
