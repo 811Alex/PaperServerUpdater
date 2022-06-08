@@ -9,17 +9,20 @@ OLD_VER_DIR="$PAPER_DIR/old_paper_versions"
 assume_yes=false
 print_changes=true
 force_update=false
+check_integrity=true
 while [ -n "$1" ]; do
   case "$1" in
-    -y|--yes|--assume-yes|yes|auto) assume_yes=true;;
-    -s|--short|short)               print_changes=false;;
-    -f|--force|force)               force_update=true;;
-    -v|--force-version|ver)         latest_version="$2"; shift;;
-    -h|--help|help)                 echo "
+    -y|--yes|--assume-yes|yes|auto)   assume_yes=true;;
+    -s|--short|short)                 print_changes=false;;
+    -f|--force|force)                 force_update=true;;
+    -n|--no-integrity-check|nocheck)  check_integrity=false;;
+    -v|--force-version|ver)           latest_version="$2"; shift;;
+    -h|--help|help)                   echo "
       -h, --help:                     Print this help message.
       -y, --assume-yes:               Don't ask for confirmation before update.
       -s, --short:                    To be used with -y, it makes it so the script doesn't print the changes, from the current to the latest build.
       -f, --force:                    Force update, even if on the latest version.
+      -n, --no-integrity-check:       Skip integrity (checksum) check.
       -v, --force-version <version>:  Use specified Minecraft version, instead of the latest one. Supports wildcards, ex.: 1.14.* will select 1.14.4 (the latest one).
     "; exit;;
   esac
@@ -155,9 +158,17 @@ echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
 mv -f paper-*.jar "$OLD_VER_DIR/"   # move old versions, to keep things clean
 
-dl_info="$(apiget "versions/$latest_version/builds/$latest_build" '.downloads.application//""')"
+dl_info="$(apiget "versions/$latest_version/builds/$latest_build" '.downloads.application')"
 dl_filename="$(jq -r ".name//\"paper-${latest_version}-${latest_build}.jar\"" <<< "$dl_info")"
+dl_sha256="$(jq -r '.sha256//""' <<< "$dl_info")"
 wget -q --show-progress -O "$filename" "$PAPER_API/versions/$latest_version/builds/$latest_build/downloads/$dl_filename"
-chmod +x "$filename"
 ln -s -f "$filename" "paper"        # make symlink, with a static name, for use in scripts
+if $check_integrity; then
+  echo -en "\e[35mChecking integrity... \e[0m"
+  chmod -x "$filename"
+  [ -z "$dl_sha256" ] && abort "Can't grab checksum from API, unable to verify integrity!\nNot granting new version execution permissions, please investigate." 3
+  sha256sum -c --status --strict <<< "$dl_sha256 $filename" || abort 'Integrity check failed, wrong checksum!\nNot granting new version execution permissions, please investigate.' 5
+  echo -e "\e[1;32mIntegrity verified!\e[0m"
+fi
+chmod +x "$filename"
 echo -e "\e[90mYou can use the \"paper\" symlink to start Paper.\n\e[32mDone!\e[0m"
