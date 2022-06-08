@@ -68,7 +68,11 @@ if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if w
         latest_ver_builds="$(apiget "versions/$loop_ver/builds" '.builds')"
         if $(jq 'isempty(.[])' <<< "$latest_ver_builds"); then
           echo -e "\e[1;31mNone found!\e[0m"
-          [ "$loop_ver" == "$latest_version" ] && latest_version=$(jq -r ".[index(\"$latest_version\")-1]" <<< "$versions")
+          if [ "$loop_ver" == "$latest_version" ]; then
+            latest_version=$(jq -r ".[index(\"$latest_version\")-1]" <<< "$versions")
+            filename="paper-${latest_version}-${latest_build}.jar"
+            ! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
+          fi
           continue
         fi
         latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")
