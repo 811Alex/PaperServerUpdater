@@ -134,7 +134,7 @@ if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if w
               build_found=true
               break
             fi
-          done <<< "$(jq -r ".[index(\"$curr_ver\"):index(\"$latest_version\")+1][]" <<< "$versions")"
+          done <<< "$(jq -r ".[([index(\"$curr_ver\"),index(\"$latest_version\")]|min):index(\"$latest_version\")+1][]" <<< "$versions")"
         fi
         $build_found || abort 'Build not found!' 1
         echo -e "\e[1;32mFound \e[35m$latest_version\e[32m:\e[35m$latest_build\e[32m!\e[0m"
