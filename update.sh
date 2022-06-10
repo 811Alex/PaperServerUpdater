@@ -156,13 +156,13 @@ fi
 # DOWNLOAD UPDATE
 echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
-mv -f paper-*.jar "$OLD_VER_DIR/"   # move old versions, to keep things clean
+mv -f paper-*.jar "$OLD_VER_DIR/" 2>/dev/null   # move old versions, to keep things clean
 
 dl_info="$(apiget "versions/$latest_version/builds/$latest_build" '.downloads.application')"
 dl_filename="$(jq -r ".name//\"paper-${latest_version}-${latest_build}.jar\"" <<< "$dl_info")"
 dl_sha256="$(jq -r '.sha256//""' <<< "$dl_info")"
 wget -q --show-progress -O "$filename" "$PAPER_API/versions/$latest_version/builds/$latest_build/downloads/$dl_filename"
-ln -s -f "$filename" "paper"        # make symlink, with a static name, for use in scripts
+ln -s -f "$filename" "paper"                    # make symlink, with a static name, for use in scripts
 if $check_integrity; then
   echo -en "\e[35mChecking integrity... \e[0m"
   chmod -x "$filename"
