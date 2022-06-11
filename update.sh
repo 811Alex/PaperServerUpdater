@@ -154,9 +154,14 @@ if $print_changes && curr="$(ls -1 paper-*.jar 2>/dev/null)"; then            # 
 fi
 
 # DOWNLOAD UPDATE
-echo -e "\e[35mUpdating Paper...\e[0m"
 mkdir -p "$OLD_VER_DIR"
-mv -f paper-*.jar "$OLD_VER_DIR/" 2>/dev/null   # move old versions, to keep things clean
+if [ -n "$curr" ]; then
+  echo -e "\e[35mUpdating Paper...\e[0m"
+  mv -f paper-*.jar "$OLD_VER_DIR/"             # move old versions, to keep things clean
+else
+  echo -e "\e[35mInstalling Paper...\e[0m"
+fi
+
 
 dl_info="$(apiget "versions/$latest_version/builds/$latest_build" '.downloads.application')"
 dl_filename="$(jq -r ".name//\"paper-${latest_version}-${latest_build}.jar\"" <<< "$dl_info")"
