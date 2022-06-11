@@ -61,7 +61,7 @@ filename="paper-${latest_version}-${latest_build}.jar"
 ! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
 
 # PRINT CHANGES
-if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if we have downloaded previous builds
+if $print_changes && curr="$(ls -1 paper-*.jar 2>/dev/null)"; then            # if we have downloaded previous builds
   curr="$(sort -V <<< "$curr" | tail -n1 | rev | cut -d'.' -f2- | rev)"
   curr_ver=$(cut -d'-' -f2 <<< "$curr")                                   # extract latest downloaded MC version
   curr_build=$(cut -d'-' -f3 <<< "$curr")                                 # extract latest downloaded build number
