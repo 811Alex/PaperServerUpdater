@@ -38,7 +38,7 @@ abort(){ echo -e "\e[$( ([ -n "$2" ] && [ $2 -ne 0 ]) && echo '31' || echo '32')
 # VERSION NUMBERS
 versions=$(apiget '.versions')
 if [ -z "$latest_version" ]; then
-  latest_version=$(echo "$versions" | jq -r '.[-1]')                      # get latest version
+  latest_version=$(jq -r '.[-1]' <<< "$versions")                         # get latest version
 else
   echo -en "\e[35mLooking up matching versions... \e[0m"
   version_pattern="^$(sed 's/\.\*$/(&)?/g; s/\./\\\\./g; s/\*/.*/g' <<< "$latest_version")$"  # make regex
@@ -48,11 +48,16 @@ else
   latest_version="$(jq -r '.[-1]' <<< "$matching_versions")"
   echo -e "\e[35mSelected latest matching version: \e[32m$latest_version\e[0m"
 fi
+
 latest_ver_builds=$(apiget "versions/$latest_version/builds" '.builds')
+if $(jq 'isempty(.[])' <<< "$latest_ver_builds"); then                       # go back one MC version, if the latest one doesn't have any builds
+  latest_version=$(jq -r ".[index(\"$latest_version\")-1]" <<< "$versions")
+  latest_ver_builds=$(apiget "versions/$latest_version/builds" '.builds')
+fi
 latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")                 # get latest build
-filename="paper-${latest_version}-${latest_build}.jar"
 
 cd "$PAPER_DIR"
+filename="paper-${latest_version}-${latest_build}.jar"
 ! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
 
 # PRINT CHANGES
@@ -69,13 +74,8 @@ if $print_changes && curr="$(ls -1 paper-* 2>/dev/null)"; then            # if w
       if [ $included_ver_num -gt 1 ]; then
         echo -e "\e[35mChanges for \e[1;35m$loop_ver\e[0;35m:\e[0m"
         latest_ver_builds="$(apiget "versions/$loop_ver/builds" '.builds')"
-        if $(jq 'isempty(.[])' <<< "$latest_ver_builds"); then
+        if $(jq 'isempty(.[])' <<< "$latest_ver_builds"); then  # MC version has no builds, skip
           echo -e "\e[1;31mNone found!\e[0m"
-          if [ "$loop_ver" == "$latest_version" ]; then
-            latest_version=$(jq -r ".[index(\"$latest_version\")-1]" <<< "$versions")
-            filename="paper-${latest_version}-${latest_build}.jar"
-            ! $force_update && [ -e "$filename" ] && abort 'You already have the latest version of Paper!'  # the latest version already exists here
-          fi
           continue
         fi
         latest_build=$(jq '.[-1].build' <<< "$latest_ver_builds")
